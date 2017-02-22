@@ -31,7 +31,7 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 
 	var foundTag *github.RepositoryTag
-	foundTag, err = c.github.GetTag(request.Version.ID)
+	foundTag, err = c.github.GetTag(request.Version.Tag)
 
 	if err != nil {
 		return InResponse{}, err
