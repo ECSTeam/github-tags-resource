@@ -2,7 +2,6 @@ package resource
 
 import (
 	"regexp"
-	"strconv"
 
 	"github.com/google/go-github/github"
 )
@@ -18,10 +17,6 @@ func determineVersionFromTag(tag string) string {
 	}
 }
 
-func versionFromRelease(release *github.RepositoryRelease) Version {
-	if *release.Draft {
-		return Version{ID: strconv.Itoa(*release.ID)}
-	} else {
-		return Version{Tag: *release.TagName}
-	}
+func versionFromTag(release *github.RepositoryTag) Version {
+	return Version{Tag: *release.Name}
 }

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/concourse/github-release-resource"
+	"github.com/ecsteam/github-tags-resource"
 )
 
 func main() {

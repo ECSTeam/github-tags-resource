@@ -2,7 +2,6 @@ package resource
 
 import (
 	"sort"
-	"strconv"
 
 	"github.com/google/go-github/github"
 
@@ -20,72 +19,64 @@ func NewCheckCommand(github GitHub) *CheckCommand {
 }
 
 func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
-	releases, err := c.github.ListReleases()
+	tags, err := c.github.ListTags()
 	if err != nil {
 		return []Version{}, err
 	}
 
-	if len(releases) == 0 {
+	if len(tags) == 0 {
 		return []Version{}, nil
 	}
 
-	var filteredReleases []*github.RepositoryRelease
+	var filteredTags []*github.RepositoryTag
 
-	for _, release := range releases {
-		if request.Source.Drafts != *release.Draft {
-			continue
-		}
+	for _, release := range tags {
 
 		// Should we skip this release
 		//   a- prerelease condition dont match our source config
 		//   b- release condition match  prerealse in github since github has true/false to describe release/prerelase
-		if request.Source.PreRelease != *release.Prerelease && request.Source.Release == *release.Prerelease {
-			continue
-		}
+		// if request.Source.PreTag != *release.Prerelease && request.Source.Tag == *release.Prerelease {
+		// 	continue
+		// }
+		//
+		// if release.TagName == nil {
+		// 	continue
+		// }
+		// if _, err := version.NewVersionFromString(determineVersionFromTag(*release.TagName)); err != nil {
+		// 	continue
+		// }
 
-		if release.TagName == nil {
-			continue
-		}
-		if _, err := version.NewVersionFromString(determineVersionFromTag(*release.TagName)); err != nil {
-			continue
-		}
-
-		filteredReleases = append(filteredReleases, release)
+		filteredTags = append(filteredTags, release)
 	}
 
-	sort.Sort(byVersion(filteredReleases))
+	sort.Sort(byVersion(filteredTags))
 
-	if len(filteredReleases) == 0 {
+	if len(filteredTags) == 0 {
 		return []Version{}, nil
 	}
-	latestRelease := filteredReleases[len(filteredReleases)-1]
+	latestTag := filteredTags[len(filteredTags)-1]
 
 	if (request.Version == Version{}) {
 		return []Version{
-			versionFromRelease(latestRelease),
+			versionFromTag(latestTag),
 		}, nil
 	}
 
-	if *latestRelease.TagName == request.Version.Tag {
+	if *latestTag.Name == request.Version.Tag {
 		return []Version{}, nil
 	}
 
 	upToLatest := false
 	reversedVersions := []Version{}
 
-	for _, release := range filteredReleases {
+	for _, release := range filteredTags {
 		if !upToLatest {
-			if *release.Draft || *release.Prerelease {
-				id := *release.ID
-				upToLatest = request.Version.ID == strconv.Itoa(id)
-			} else {
-				version := *release.TagName
-				upToLatest = request.Version.Tag == version
-			}
+			version := *release.Name
+			upToLatest = request.Version.Tag == version
 		}
 
 		if upToLatest {
-			reversedVersions = append(reversedVersions, versionFromRelease(release))
+			reversedVersions = append(reversedVersions, versionFromTag(release))
 		}
 	}
 
@@ -93,14 +84,14 @@ func (c *CheckCommand) Run(request CheckRequest) ([]Version, error) {
 		// current version was removed; start over from latest
 		reversedVersions = append(
 			reversedVersions,
-			versionFromRelease(filteredReleases[len(filteredReleases)-1]),
+			versionFromTag(filteredTags[len(filteredTags)-1]),
 		)
 	}
 
 	return reversedVersions, nil
 }
 
-type byVersion []*github.RepositoryRelease
+type byVersion []*github.RepositoryTag
 
 func (r byVersion) Len() int {
 	return len(r)
@@ -111,12 +102,12 @@ func (r byVersion) Swap(i, j int) {
 }
 
 func (r byVersion) Less(i, j int) bool {
-	first, err := version.NewVersionFromString(determineVersionFromTag(*r[i].TagName))
+	first, err := version.NewVersionFromString(determineVersionFromTag(*r[i].Name))
 	if err != nil {
 		return true
 	}
 
-	second, err := version.NewVersionFromString(determineVersionFromTag(*r[j].TagName))
+	second, err := version.NewVersionFromString(determineVersionFromTag(*r[j].Name))
 	if err != nil {
 		return false
 	}

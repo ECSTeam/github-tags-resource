@@ -3,7 +3,7 @@ package resource_test
 import (
 	"net/http"
 
-	. "github.com/concourse/github-release-resource"
+	. "github.com/ecsteam/github-tags-resource"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -62,7 +62,7 @@ var _ = Describe("GitHub Client", func() {
 
 			server.AppendHandlers(
 				ghttp.CombineHandlers(
-					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases"),
+					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/tags"),
 					ghttp.RespondWith(200, "[]"),
 					ghttp.VerifyHeaderKV("Authorization", "Bearer abc123"),
 				),
@@ -70,7 +70,7 @@ var _ = Describe("GitHub Client", func() {
 		})
 
 		It("sends one", func() {
-			_, err := client.ListReleases()
+			_, err := client.ListTags()
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -84,7 +84,7 @@ var _ = Describe("GitHub Client", func() {
 
 			server.AppendHandlers(
 				ghttp.CombineHandlers(
-					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases"),
+					ghttp.VerifyRequest("GET", "/repos/concourse/concourse/tags"),
 					ghttp.RespondWith(200, "[]"),
 					ghttp.VerifyHeader(http.Header{"Authorization": nil}),
 				),
@@ -92,7 +92,7 @@ var _ = Describe("GitHub Client", func() {
 		})
 
 		It("sends one", func() {
-			_, err := client.ListReleases()
+			_, err := client.ListTags()
 			Ω(err).ShouldNot(HaveOccurred())
 		})
 	})
@@ -119,14 +119,14 @@ var _ = Describe("GitHub Client", func() {
 
 				server.AppendHandlers(
 					ghttp.CombineHandlers(
-						ghttp.VerifyRequest("GET", "/repos/concourse/concourse/releases/20"),
+						ghttp.VerifyRequest("GET", "/repos/concourse/concourse/tags"),
 						ghttp.RespondWith(403, rateLimitResponse, rateLimitHeaders),
 					),
 				)
 			})
 
 			It("Returns an appropriate error", func() {
-				_, err := client.GetRelease(20)
+				_, err := client.GetTag("20")
 				Expect(err).ToNot(BeNil())
 				Expect(err.Error()).To(ContainSubstring("API rate limit exceeded for 127.0.0.1. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)"))
 			})
@@ -159,12 +159,6 @@ var _ = Describe("GitHub Client", func() {
 						ghttp.RespondWith(403, rateLimitResponse, rateLimitHeaders),
 					),
 				)
-			})
-
-			It("Returns an appropriate error", func() {
-				_, err := client.GetReleaseByTag("some-tag")
-				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("API rate limit exceeded for 127.0.0.1. (But here's the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)"))
 			})
 		})
 	})

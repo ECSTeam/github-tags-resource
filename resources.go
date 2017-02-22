@@ -7,9 +7,6 @@ type Source struct {
 	GitHubAPIURL     string `json:"github_api_url"`
 	GitHubUploadsURL string `json:"github_uploads_url"`
 	AccessToken      string `json:"access_token"`
-	Drafts           bool   `json:"drafts"`
-	PreRelease       bool   `json:"pre_release"`
-	Release          bool   `json:"release"`
 }
 
 type CheckRequest struct {
@@ -19,19 +16,11 @@ type CheckRequest struct {
 
 func NewCheckRequest() CheckRequest {
 	res := CheckRequest{}
-	res.Source.Release = true
-	return res
-}
-
-func NewOutRequest() OutRequest {
-	res := OutRequest{}
-	res.Source.Release = true
 	return res
 }
 
 func NewInRequest() InRequest {
 	res := InRequest{}
-	res.Source.Release = true
 	return res
 }
 
@@ -42,32 +31,11 @@ type InRequest struct {
 }
 
 type InParams struct {
-	Globs                []string `json:"globs"`
-	IncludeSourceTarball bool     `json:"include_source_tarball"`
-	IncludeSourceZip     bool     `json:"include_source_zip"`
+	IncludeSourceTarball bool `json:"include_source_tarball"`
+	IncludeSourceZip     bool `json:"include_source_zip"`
 }
 
 type InResponse struct {
-	Version  Version        `json:"version"`
-	Metadata []MetadataPair `json:"metadata"`
-}
-
-type OutRequest struct {
-	Source Source    `json:"source"`
-	Params OutParams `json:"params"`
-}
-
-type OutParams struct {
-	NamePath      string `json:"name"`
-	BodyPath      string `json:"body"`
-	TagPath       string `json:"tag"`
-	CommitishPath string `json:"commitish"`
-	TagPrefix     string `json:"tag_prefix"`
-
-	Globs []string `json:"globs"`
-}
-
-type OutResponse struct {
 	Version  Version        `json:"version"`
 	Metadata []MetadataPair `json:"metadata"`
 }

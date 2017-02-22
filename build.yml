@@ -6,11 +6,11 @@ image_resource:
   source: {repository: concourse/static-golang}
 
 inputs:
-- name: github-release-resource
-  path: gopath/src/github.com/concourse/github-release-resource
+- name: github-tags-resource
+  path: gopath/src/github.com/ecsteam/github-tags-resource
 
 outputs:
 - name: built-resource
 
 run:
-  path: gopath/src/github.com/concourse/github-release-resource/scripts/ci
+  path: gopath/src/github.com/ecsteam/github-tags-resource/scripts/ci

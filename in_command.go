@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/google/go-github/github"
 )
@@ -31,82 +30,31 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 		return InResponse{}, err
 	}
 
-	var foundRelease *github.RepositoryRelease
+	var foundTag *github.RepositoryTag
+	foundTag, err = c.github.GetTag(request.Version.ID)
 
-	if request.Version.Tag != "" {
-		foundRelease, err = c.github.GetReleaseByTag(request.Version.Tag)
-	} else {
-		id, _ := strconv.Atoi(request.Version.ID)
-		foundRelease, err = c.github.GetRelease(id)
-	}
 	if err != nil {
 		return InResponse{}, err
 	}
 
-	if foundRelease == nil {
-		return InResponse{}, errors.New("no releases")
+	if foundTag == nil {
+		return InResponse{}, errors.New("no tags")
 	}
 
-	if foundRelease.TagName != nil && *foundRelease.TagName != "" {
+	if foundTag.Name != nil && *foundTag.Name != "" {
 		tagPath := filepath.Join(destDir, "tag")
-		err = ioutil.WriteFile(tagPath, []byte(*foundRelease.TagName), 0644)
+		err = ioutil.WriteFile(tagPath, []byte(*foundTag.Name), 0644)
 		if err != nil {
 			return InResponse{}, err
 		}
 
-		version := determineVersionFromTag(*foundRelease.TagName)
+		version := determineVersionFromTag(*foundTag.Name)
 		versionPath := filepath.Join(destDir, "version")
 		err = ioutil.WriteFile(versionPath, []byte(version), 0644)
 		if err != nil {
 			return InResponse{}, err
 		}
 
-		if foundRelease.Body != nil && *foundRelease.Body != "" {
-			body := *foundRelease.Body
-			bodyPath := filepath.Join(destDir, "body")
-			err = ioutil.WriteFile(bodyPath, []byte(body), 0644)
-			if err != nil {
-				return InResponse{}, err
-			}
-		}
-
-	}
-
-	assets, err := c.github.ListReleaseAssets(*foundRelease)
-	if err != nil {
-		return InResponse{}, err
-	}
-
-	for _, asset := range assets {
-		path := filepath.Join(destDir, *asset.Name)
-
-		var matchFound bool
-		if len(request.Params.Globs) == 0 {
-			matchFound = true
-		} else {
-			for _, glob := range request.Params.Globs {
-				matches, err := filepath.Match(glob, *asset.Name)
-				if err != nil {
-					return InResponse{}, err
-				}
-
-				if matches {
-					matchFound = true
-					break
-				}
-			}
-		}
-
-		if !matchFound {
-			continue
-		}
-
-		fmt.Fprintf(c.writer, "downloading asset: %s\n", *asset.Name)
-
-		err := c.downloadAsset(asset, path)
-		if err != nil {
-			return InResponse{}, err
-		}
 	}
 
 	if request.Params.IncludeSourceTarball {
@@ -132,30 +80,9 @@ func (c *InCommand) Run(destDir string, request InRequest) (InResponse, error) {
 	}
 
 	return InResponse{
-		Version:  versionFromRelease(foundRelease),
-		Metadata: metadataFromRelease(foundRelease),
+		Version:  versionFromTag(foundTag),
+		Metadata: metadataFromTag(foundTag),
 	}, nil
-}
-
-func (c *InCommand) downloadAsset(asset *github.ReleaseAsset, destPath string) error {
-	out, err := os.Create(destPath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	content, err := c.github.DownloadReleaseAsset(*asset)
-	if err != nil {
-		return err
-	}
-	defer content.Close()
-
-	_, err = io.Copy(out, content)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (c *InCommand) downloadFile(url, destPath string) error {

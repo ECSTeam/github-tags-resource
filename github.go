@@ -1,31 +1,17 @@
 package resource
 
 import (
-	"errors"
-	"io"
 	"net/http"
 	"net/url"
-	"os"
 
 	"golang.org/x/oauth2"
 
 	"github.com/google/go-github/github"
 )
 
-//go:generate counterfeiter . GitHub
-
 type GitHub interface {
-	ListReleases() ([]*github.RepositoryRelease, error)
-	GetReleaseByTag(tag string) (*github.RepositoryRelease, error)
-	GetRelease(id int) (*github.RepositoryRelease, error)
-	CreateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error)
-	UpdateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error)
-
-	ListReleaseAssets(release github.RepositoryRelease) ([]*github.ReleaseAsset, error)
-	UploadReleaseAsset(release github.RepositoryRelease, name string, file *os.File) error
-	DeleteReleaseAsset(asset github.ReleaseAsset) error
-	DownloadReleaseAsset(asset github.ReleaseAsset) (io.ReadCloser, error)
-
+	ListTags() ([]*github.RepositoryTag, error)
+	GetTag(id string) (*github.RepositoryTag, error)
 	GetTarballLink(tag string) (*url.URL, error)
 	GetZipballLink(tag string) (*url.URL, error)
 }
@@ -78,10 +64,10 @@ func NewGitHubClient(source Source) (*GitHubClient, error) {
 	}, nil
 }
 
-func (g *GitHubClient) ListReleases() ([]*github.RepositoryRelease, error) {
-	releases, res, err := g.client.Repositories.ListReleases(g.user, g.repository, nil)
+func (g *GitHubClient) ListTags() ([]*github.RepositoryTag, error) {
+	tags, res, err := g.client.Repositories.ListTags(g.user, g.repository, nil)
 	if err != nil {
-		return []*github.RepositoryRelease{}, err
+		return []*github.RepositoryTag{}, err
 	}
 
 	err = res.Body.Close()
@@ -89,125 +75,22 @@ func (g *GitHubClient) ListReleases() ([]*github.RepositoryRelease, error) {
 		return nil, err
 	}
 
-	return releases, nil
+	return tags, nil
 }
 
-func (g *GitHubClient) GetReleaseByTag(tag string) (*github.RepositoryRelease, error) {
-	release, res, err := g.client.Repositories.GetReleaseByTag(g.user, g.repository, tag)
+func (g *GitHubClient) GetTag(id string) (*github.RepositoryTag, error) {
+	tags, err := g.ListTags()
 	if err != nil {
-		return &github.RepositoryRelease{}, err
+		return &github.RepositoryTag{}, err
 	}
 
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return release, nil
-}
-
-func (g *GitHubClient) GetRelease(id int) (*github.RepositoryRelease, error) {
-	release, res, err := g.client.Repositories.GetRelease(g.user, g.repository, id)
-	if err != nil {
-		return &github.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return release, nil
-}
-
-func (g *GitHubClient) CreateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error) {
-	createdRelease, res, err := g.client.Repositories.CreateRelease(g.user, g.repository, &release)
-	if err != nil {
-		return &github.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return createdRelease, nil
-}
-
-func (g *GitHubClient) UpdateRelease(release github.RepositoryRelease) (*github.RepositoryRelease, error) {
-	if release.ID == nil {
-		return nil, errors.New("release did not have an ID: has it been saved yet?")
-	}
-
-	updatedRelease, res, err := g.client.Repositories.EditRelease(g.user, g.repository, *release.ID, &release)
-	if err != nil {
-		return &github.RepositoryRelease{}, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return updatedRelease, nil
-}
-
-func (g *GitHubClient) ListReleaseAssets(release github.RepositoryRelease) ([]*github.ReleaseAsset, error) {
-	assets, res, err := g.client.Repositories.ListReleaseAssets(g.user, g.repository, *release.ID, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = res.Body.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return assets, nil
-}
-
-func (g *GitHubClient) UploadReleaseAsset(release github.RepositoryRelease, name string, file *os.File) error {
-	_, res, err := g.client.Repositories.UploadReleaseAsset(
-		g.user,
-		g.repository,
-		*release.ID,
-		&github.UploadOptions{
-			Name: name,
-		},
-		file,
-	)
-	if err != nil {
-		return err
-	}
-
-	return res.Body.Close()
-}
-
-func (g *GitHubClient) DeleteReleaseAsset(asset github.ReleaseAsset) error {
-	res, err := g.client.Repositories.DeleteReleaseAsset(g.user, g.repository, *asset.ID)
-	if err != nil {
-		return err
-	}
-
-	return res.Body.Close()
-}
-
-func (g *GitHubClient) DownloadReleaseAsset(asset github.ReleaseAsset) (io.ReadCloser, error) {
-	res, redir, err := g.client.Repositories.DownloadReleaseAsset(g.user, g.repository, *asset.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	if redir != "" {
-		resp, err := http.Get(redir)
-		if err != nil {
-			return nil, err
+	for _, tag := range tags {
+		if *tag.Name == id {
+			return tag, nil
 		}
-
-		return resp.Body, nil
 	}
 
-	return res, err
+	return nil, nil
 }
 
 func (g *GitHubClient) GetTarballLink(tag string) (*url.URL, error) {
