@@ -8,9 +8,9 @@ export PATH=$GOPATH/bin:$PATH
 
 BUILD_DIR=$PWD/built-resource
 
-cd $GOPATH/src/github.com/concourse/github-release-resource
+cd $GOPATH/src/github.com/ecsteam/github-tags-resource
 
-go install github.com/concourse/github-release-resource/vendor/github.com/onsi/ginkgo/ginkgo
+go install github.com/ecsteam/github-tags-resource/vendor/github.com/onsi/ginkgo/ginkgo
 
 CGO_ENABLED=1 ginkgo -race -r -p "$@"
 
